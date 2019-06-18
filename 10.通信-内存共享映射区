@@ -1,0 +1,45 @@
+mmp--创建内存映射
+作用：：将磁盘文件的数据映射到内存，用户通过修改内存，就能修改磁盘文件。
+函数原型：：
+void *mmap{
+void *addr.   //映射区首地址，传NULL
+size_t length  //映射区的大小
+int prot    //映射区的权限
+    PROT_WRITE
+    PROT_READ--映射区必须要有读权限。
+int flags; //标志位参数
+    MAP_SHARED
+    修改了内存数据会同步到磁盘
+    MAP_PRIVATE 私有
+    修改了内存数据不会同步到磁盘
+int fd   //文件描述符
+    要映射的文件对应的FD
+off_t offset  //映射文件的偏移量,4096的整数倍
+映射时如果只是想要文件的一部分，可以通过offset来进行偏移。
+}；
+调用成功返回映射区的首地址。
+调用失败：map_faild
+
+2.munmap-释放内存映射区
+函数原型：int munmap(void *addr,size_t length);
+               addr--mmap的返回值，映射区的首地址
+               length--mmap的第二个参数
+eg::
+int fd=open("english.txt",O_RDWR);
+int len=lseek(fd,0,SEEK_END);
+//创建内存映射区
+void *ptr=mmap(NULL,len,PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
+if(ptr==MAP_FAILED){
+cout<<"error"<<endl;
+}
+munmap(ptr,len);
+close(fd);
+return 0;
+
+打开一个新文件，文件大小是0会出错，所以要先对文件做扩展。
+ftruncate(fd,length);
+
+创建匿名映射区。
+int len=4096;
+void *ptr=mmap(NULL,len,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_UNON,-1,0);
+//去掉fd文件描述符，添加宏
