@@ -1,0 +1,38 @@
+/*
+#include<sys/wait.h>
+pid_t wait(int *statloc);
+  成功时返回终止的子进程id,失败时返回-1。
+  注意：此函数是阻塞的，如果没有子进程结束，会一直等待，知道子进程结束
+  
+WIFEXITED:子进程正常终止时返回“真"
+WEXITSTATUS:返回子进程的返回值。
+*/
+#include<stdio.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<arpa/inet.h>
+#include<sys/socket.h>
+#define BUF_SIZE 30
+int main()
+{
+    int status;
+    pid_t pid=fork();
+    
+    if(pid==0) return 3;
+    else{
+        pid=fork();
+        if(pid==0) exit(7);
+        else{
+            wait(&status);
+            if(WIFEXIT(status))
+                printf("Child send one:%d\n",WEXITSTATUS(status));
+            
+            wait(&status);
+            if(WIFEXIT(status))
+                printf("Child send one:%d\n",WEXITSTATUS(status));
+            //sleep(30);
+        }
+    }
+}
+
+
