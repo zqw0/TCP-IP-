@@ -1,0 +1,46 @@
+/*
+#include<signal.h>
+void (*signal(int signo,void (*func)(int)))(int);
+    为了在产生信号时调用，返回之前注册的函数指针
+函数名：signal
+参数：int signo,void(* func)(int)
+signo对应的宏：
+    1.SIGALRM:已到通过调用alarm函数注册的时间
+    2.SIGINT:输入CTRL+C.
+    3.SIGCHLD:子进程终止
+    
+#include<unistd.h>
+unsigned int alarm(unsigned int seconds);
+    返回0或以秒为单位的距SIGALRM信号发生所剩时间。
+
+*/
+#include<stdio.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<arpa/inet.h>
+#include<sys/socket.h>
+#include<sys/wait.h>
+#include<signal.h>
+#define BUF_SIZE 30
+void kill(int sig){
+    int status;
+    if(sig==SIGCHILD)
+        waitpid(-1,&status,WNOHANG);
+    if(WIFEXITED(status))
+    printf("Child send%d\n",WEXITSTATUS(status));
+    return;
+}
+int main()
+{
+    int status;
+    pid_t pid=fork();
+    if(pid==0){
+        return 24;
+    }
+    else{
+        sleep(3);///起到延迟作用，调用signal函数会自动醒来
+        signal(SIGCHILD,kill);
+    }
+    return 0;
+}
+
