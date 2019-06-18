@@ -1,0 +1,25 @@
+1.特点
+有名管道。
+在磁盘上有这样一个文件ls -l ->p
+伪文件，在磁盘大小永远为0
+在内核中有一个对应的缓冲区。
+半双工。
+
+在磁盘上有一个fifo文件，对应内核缓冲区。实际写入内核缓冲区中。
+2.使用场景
+无血缘关系的程序
+3.使用
+int fifo(const char *pathname,mode_t mode);
+第一个参数为路径+文件名字。
+第二个参数为权限mode&(~umask);
+然后在程序中把他当做文件open打开返回fd，使用即可。
+fifo文件---myfifo。
+a.c-->read。
+int fd=open("myfifo",O_RDONLY);
+read(fd,buf,sizeof(buf));
+close(fd);
+
+b.c-->write.
+int fd1=open("myfifo,"O_WRONLY);
+write(fd1,"hello,world",11);
+close(fd1);
