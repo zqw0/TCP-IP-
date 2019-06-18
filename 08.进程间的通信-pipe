@@ -1,0 +1,57 @@
+/*
+#include<unistd.h>
+int pipe(int filedes[2]);
+    成功时返回0，失败时返回-1
+    filedes[0]通过管道接收数据使用的文件描述符，管道出口read
+    filedes[1]通过管道传输数据使用的文件描述符，管道入口write
+    
+1.管道（匿名）
+1.管道的概念。
+本质：：
+内核缓冲区。
+伪文件-不占用磁盘空间。
+特点：：
+读端，写端对应两个文件描述符
+数据写端流入，读端流出
+操作管道的进程被销毁之后，管道自动释放。
+管道是默认阻塞的。解释：：读无可读，写满时就会阻塞
+
+2.管道的原理。
+队列。
+缓冲区大小默认4K，但是不是一定的，会适当调正
+3.管道的局限性
+队列：
+数据只能读取一次，不能重复读取。
+半双工，单项传输。
+只能适用于有血缘关系的进程。
+
+fd[0]的整形值为3，对应文件描述符3用来读。
+fd[1]的整形值为4，对应文件描述符4用来写。
+
+*/
+#include<stdio.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<arpa/inet.h>
+#include<sys/socket.h>
+#include<sys/wait.h>
+#include<signal.h>
+#define BUF_SIZE 30
+int main()
+{
+    int fds[2];
+    char str[]="who are you";
+    char buf[BUF_SIZE];
+    pid_t pid;
+    pipe(fds);
+    pid=fork();
+    if(pid==0){
+        write(fds[1],str,sizeof(str));
+    }
+    else{
+        read(fds[0],buf,BUF_SIZE);
+        puts(buf);
+    }
+    return 0;
+}
+
