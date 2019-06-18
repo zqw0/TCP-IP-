@@ -1,0 +1,48 @@
+/*
+#include<signal.h>
+int sigaction(int signo,const struct sigaction *act,struct sigaction *oldact);
+    成功时返回0，失败时返回-1
+    signo:与signal函数相同，传递信号信息
+    act:  对应于第一个参数的信号处理函数信息
+    oldact:通过此参数获取之前注册的信号处理函数指针，若不需要则传递0
+    
+struct sigaction{
+    void (*sa_handler)(int)
+    sigset_t sa_mask;
+    int sa_flags;
+}
+*/
+#include<stdio.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<arpa/inet.h>
+#include<sys/socket.h>
+#include<sys/wait.h>
+#include<signal.h>
+#define BUF_SIZE 30
+void kill(int sig){
+    int status;
+    if(sig==SIGCHILD)
+        waitpid(-1,&status,WNOHANG);
+    if(WIFEXITED(status))
+    printf("Child send%d\n",WEXITSTATUS(status));
+    return;
+}
+int main()
+{
+    int status;
+    struct sigaction act;
+    act.sa_handler=kill;
+    sigemptyset(&act.sa_mask);
+    act.sa_flags=0;
+    sigaction(SIGCHLD,&act,0);
+    pid_t pid=fork();
+    if(pid==0){
+        return 24;
+    }
+    else{
+        sleep(3);///起到延迟作用，调用signal函数会自动醒来
+    }
+    return 0;
+}
+
