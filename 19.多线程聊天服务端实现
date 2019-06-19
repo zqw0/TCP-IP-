@@ -1,0 +1,93 @@
+#include<stdio.h>
+#include<arpa/inet.h>
+#include<sys/socket.h>
+#include<sys/wait.h>
+#include<signal.h>
+#include<time.h>
+#include<sys/select.h>
+#include<pthread.h>
+#include<unistd.h>
+#include<stdlib.h>
+#include<string.h>
+#include<semaphore.h>
+#define BUF_SIZE 100
+#define MAX_CLNT 256    
+void error_handling(char *message);
+void *handle_clnt(void *arg);
+void send_msg(char *msg,int len);
+void error_handling(char *msg);
+
+int clnt_cnt=0;
+int clnt_socks[MAX_CLNT];
+pthread_mutex_t mutx;
+
+int main(int argc,char *argv[])
+{
+    int ser_sock,clnt_sock;
+    struct sockaddr_in ser_adr,clnt_adr;
+    int clnt_adr_sz;
+    pthread_t t_id;
+    if(argc!=2) break;
+    
+    pthread_mutex_init(&mutx,NULL);
+    ser_sock=socket(PF_INET,SOCK_STREAM,0);
+    
+    memset(&ser_adr,0,sizeof(ser_adr));
+    ser_adr.sin_family=AF_INET;
+    ser_adr.sin_addr.s_addr=htonl(INADDR_ANY);
+    ser_adr.sin_port=htons(atoi(argv[1]));
+    
+    if(bind(ser_sock,(struct sockaddr*)&ser_adr,sizeof(ser_adr))==-1)
+        error_handling("bind error!");
+    if(listen(ser_sock,5)==-1)
+        error_handling("listen error!");
+    
+    while(1){
+        clnt_adr_sz=sizeof(clnt_adr);
+        clnt_sock=accept(ser_sock,(struct sockaddr*)&clnt_adr,&clnt_adr_sz);
+        
+        pthread_mutex_lock(&mutx);
+        clnt_socks[clnt_cnt++]=clnt_sock;
+        pthread_mutex_unlock(&mutx);
+        
+        pthread_create(&t_id,NULL,handle_clnt,&clnt_sock);
+        pthread_detach(t_id);
+        printf("connect client ip:%s \n",inet_ntoa(clnt_adr.sin_addr));
+    }
+    close(ser_sock);
+    return 0;
+}
+void *handle_clnt(void *arg){
+    int clnt_sock=*((int *)arg);
+    int len=0,i;
+    char msg[BUF_SIZE];
+    
+    while((len=read(clnt_sock,msg,sizeof(msg)))!=0)
+        send_msg(msg,len);
+    
+    pthread_mutex_lock(&mutx);
+    for(i=0;i<clnt_cnt;i++){     ///remove disconnected client
+        if(clnt_sock==clnt_socks[i]){
+            while(i++<clnt_cnt-1)
+                clnt_socks[i]=clnt_socks[i+1];
+            break;
+        }
+    }
+    clnt_cnt--;
+    pthread_mutex_unlock(&mutx);
+    close(clnt_sock);
+    return NULL;
+}
+void send_msg(char *msg,int len){ ///send to all
+    int i;
+    pthread_mutex_lock(&mutx);
+    for(i=0;i<clnt_cnt;i++)
+        write(clnt_socks[i],msg,len);
+    pthread_mutex_unlock(&mutx);
+}
+void error_handling(char *message){
+    fputs(message,stderr);
+    fputs('\n',stderr);
+    exit(1);
+}
+
