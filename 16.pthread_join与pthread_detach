@@ -5,6 +5,13 @@ int pthread_join(pthread_t thread,void **status);
     功能：调用该函数的进程或线程将进入等待状态，知道第一个参数为ID的线程终止为止。而且可以得到线程main函数返回值
     thread:     该参数值ID的线程终止后才会从该函数返回
     status:     保存线程的main函数返回值的指针变量地址值。
+
+#include<pthread.h>
+int pthread_detach(pthread_t thread);
+    成功时返回0，失败时返回其他值。
+    功能:       调用此函数不会引阻塞状态，可以通过该函数引导销毁线程创建的内存空间。
+    thread:     终止的同时需要销毁的线程ID。
+    
 */
 #include<stdio.h>
 #include<pthread.h>
