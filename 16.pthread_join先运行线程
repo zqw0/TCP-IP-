@@ -1,0 +1,44 @@
+/*
+#include<pthread.h>
+int pthread_join(pthread_t thread,void **status);
+    成功时返回0，失败时返回其他值。
+    功能：调用该函数的进程或线程将进入等待状态，知道第一个参数为ID的线程终止为止。而且可以得到线程main函数返回值
+    thread:     该参数值ID的线程终止后才会从该函数返回
+    status:     保存线程的main函数返回值的指针变量地址值。
+*/
+#include<stdio.h>
+#include<pthread.h>
+#include<unistd.h>
+#include<stdlib.h>
+#include<string.h>
+#define BUF_SIZE 100
+#define EPOLL_SIZE 50
+void* thread_main(void *arg);
+int main()
+{
+    pthread_t t_id;
+    int thread_param=5;
+    void *thr_ret;
+    if(pthread_create(&t_id,NULL,thread_main,&thread_param)!=0){
+        puts("pthread create error!");
+        return -1;
+    }
+    if(pthread_join(t_id,&thr_ret)!=0){
+        puts("pthread_join error");
+        return -1;
+    }
+    printf("Thread return message:%s \n",(char*)thr_ret);
+    return 0;
+}
+void* thread_main(void *arg){
+    int i;
+    int cnt=(*(int *)arg);
+    char *msg=new char[50];
+    strcpy(msg,"123123");
+    for(int i=0;i<cnt;i++){
+        puts("running thread!");
+    }
+    return (void *)msg;
+}
+
+
