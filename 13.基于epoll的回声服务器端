@@ -1,0 +1,137 @@
+/*
+epoll:只在linux下支持
+    epoll_create:创建保存epoll文件描述符的空间。
+    epoll_ctl:向空间注册并注销文件描述符
+    epoll_wait:与select函数类似，等待文件描述符发生变化。
+    
+#include<sys/epoll.h>
+int epoll_create(int size);
+    成功时返回epoll文件描述符，失败时返回-1.
+    size:       epoll实例大小
+    
+#include<sys/epoll.h>
+int epoll_ctl(int epfd,int op,int fd,struct epoll_event *event);
+    成功时返回0，失败时返回-1。
+    epfd:       用于注册监视对象的epoll例程的文件描述符
+    op:         用于指定监视对象的添加、删除或更改操作
+                1.EPOLL_CTL_ADD:将文件描述符注册到epoll例程
+                2.EPOLL_CTL_DEL:从epoll例程删除文件描述符
+                3.EOPLL_CTL_MOD:更改注册的文件描述符的关注事件发生情况。
+    fd:         需要注册的监视对象文件描述符。
+    event:      监视对象的事件类型。
+
+#include<sys/epoll.h>
+int epoll_wait(int epfd,struct epoll_event *events,int maxevents,int timeout);
+    成功时返回发生事件的文件描述符数，失败时返回-1.
+    epfd:       用于注册监视对象的epoll例程的文件描述符
+    events:     保存发生事件的文件描述符集合的结构体地址值
+    maxevents:  第二个参数中可以保存的最大事件数
+    timeout:    以1/1000秒为单位的等待事件，传递-1时，一直等待直到发生事件
+    
+    struct epoll_event{
+        __uint32_t events;
+                1.EPOLLIN:需要读取数据的情况
+                2.EPOLLOUT:输出缓冲为空，可以立即发生数据的情况。
+                3.EPOLLPRI:收到OOB数据的情况
+                4.EPOLLDHUP:断开连接或半关闭的情况，这在边缘触发方式下非常有用。
+                5.EPOLLERR:发生错误的情况
+                6.EPOLLET:以边缘触发的方式得到事件的通知
+                7.EPOLLONESHOT:发生一次世界后，相应文件描述符不再收到事件通知。因此需要向epoll_ctl函数的第二个参数传递，EPOLL_CTL_MOD，再次设置事件。
+        epoll_data_t data;
+    };
+    typedef union epoll_data{
+        void *ptr;
+        int fd;
+        __uint32_t u32;
+        __unit64_t u64;
+    }epoll_data_t;
+    
+*/
+#include<stdio.h>
+#include<stdlib.h>
+#include<unistd.h>
+#include<arpa/inet.h>
+#include<sys/socket.h>
+#include<sys/wait.h>
+#include<signal.h>
+#include<time.h>
+#include<string.h>
+#include<sys/select.h>
+#define BUF_SIZE 100
+#define EPOLL_SIZE 50
+void error_handling(char *message);
+int main(int argc,char *argv[])
+{
+    int serv_sock,clnt_sock,len,i,epfd,event_cnt;
+
+    struct sockaddr_in ser_adr,clnt_adr;
+    struct epoll_event *ep_events;
+    struct epoll_event event;
+    socklen_t adr_sz;
+
+    if(argc!=2){
+        printf("Usage:%s <port>\n",argv[0]);
+        exit(1);
+    }
+
+    serv_sock=socket(PF_INET,SOCK_STREAM,0);
+    if(serv_sock==-1) error_handling("socket error");
+
+    memset(&ser_adr,0,sizeof(ser_adr));
+    ser_adr.sin_family=AF_INET;
+    ser_adr.sin_addr.s_addr=htonl(INADDR_ANY);///htonl将小端序转换为大端序
+    ser_adr.sin_port=htons(atoi(argv[1]));    ///htons将小端序转换为大端序
+
+    if(bind(serv_sock,(struct *sockaddr)&ser_adr,sizeof(ser_adr))==-1)
+        error_handling("bind error");
+
+    if(listen(serv_sock,5)==-1)
+        error_handling("listen error");
+
+    epfd=epoll_create(EPOLL_SIZE);
+    ep_events=new epoll_event[EPOLL_SIZE];
+    
+    event.events=EPOLLIN;
+    event.data.fd=serv_sock;
+    epoll_ctl(epfd,EPOLL_CTL_ADD,serv_sock,&event);
+    
+    while(1){
+        event_cnt=epoll_wait(epfd,ep_events,EPOLL_SIZE,-1);
+        if(event_cnt==-1){
+            puts("epoll_wait error!");
+            break;
+        }
+        
+        for(i=0;i<event_cnt;i++){
+            if(ep_events[i].data.fd==serv_sock){
+                adr_sz=sizeof(clnt_adr);
+                clnt_sock=accept(serv_sock,(struct *sockaddr)&clnt_adr,&adr_sz);
+                event.events=EPOLLIN;
+                event.data.fd=clnt_sock;
+                epoll_ctl(epfd,EPOLL_CTL_ADD,clnt_sock,&event);
+                printf("connect client :%d\n",clnt_sock);
+            }
+            else{
+                len=read(ep_events[i].data.fd,buf,BUF_SIZE);
+                if(len==0){     ///close request!
+                    epoll_ctl(epfd,EPOLL_CTL_DEL,ep_events[i].data.fd,NULL);
+                    close(ep_events[i].data.fd);
+                    printf("close client :%d\n",ep_events[i].data.fd);
+                }
+                else{
+                    write(ep_events[i].data.fd,buf,len);  ///echo!
+                }
+            }
+        }
+    }
+    close(epfd);
+    close(serv_sock);
+    return 0;
+}
+
+void error_handling(char *message){
+    fputs(message,stderr);
+    fputs('\n',stderr);
+    exit(1);
+}
+
