@@ -1,0 +1,39 @@
+/*
+#include<pthread.h>
+int pthread_create(pthread_t *restrict thread, const pthread_attr_t *restrict attr,
+                   void *(*start_routine)(void *),void *restrict arg);
+    成功时返回0，失败时返回其他值。
+    thread:         保存新创建线程ID的变量地址值。线程与进程相同，也需要用于区分不同线程的ID。
+    attr:           用于传递线程属性的参数，传递NULL时，创建默认属性的线程。
+    start_routine   相当于线程main函数的，在单独执行流中执行的函数地址值（函数指针）。
+    arg:            通过第三个参数传递调用函数时包含传递参数信息的变量地址值。
+*/
+#include<stdio.h>
+#include<pthread.h>
+#include<unistd.h>
+#define BUF_SIZE 100
+#define EPOLL_SIZE 50
+void* thread_main(void *arg);
+int main()
+{
+    pthread_t t_id;
+    int thread_param=5;
+
+    if(pthread_create(&t_id,NULL,thread_main,&thread_param)!=0){
+        puts("pthread create error!");
+        return -1;
+    }
+    sleep(2);
+    puts("end of main");
+    return 0;
+}
+void* thread_main(void *arg){
+    int i;
+    int cnt=(*(int *)arg);
+    for(int i=0;i<cnt;i++){
+        puts("running thread!");
+    }
+    return NULL;
+}
+
+
